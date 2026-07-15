@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111318" />
+    <meta name="description" content="漫畫原文去除、圖片修補、背景消除與譯文嵌字工具。" />
+    <title>Manga Cleaner Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">漫</div>
+          <div>
+            <h1>Manga Cleaner Studio</h1>
+            <p>原文去除 · 背景消除 · 譯文嵌字</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="button ghost" id="undoBtn" title="復原 Ctrl+Z">↶ 復原</button>
+          <button class="button ghost" id="redoBtn" title="重做 Ctrl+Y">↷ 重做</button>
+          <button class="button primary" id="downloadBtn">下載成品</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="sidebar left-panel">
+          <section class="panel-section">
+            <h2>圖片</h2>
+            <label class="upload-card" id="dropZone">
+              <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              <span class="upload-icon">＋</span>
+              <strong>上傳漫畫圖片</strong>
+              <small>PNG、JPG、WEBP；亦可拖放或貼上</small>
+            </label>
+            <div class="button-grid two">
+              <button class="button" id="fitBtn">適合畫面</button>
+              <button class="button" id="resetBtn">重設圖片</button>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <h2>原文去除</h2>
+            <div class="tool-grid">
+              <button class="tool active" data-tool="brush"><span>🖌</span>塗抹</button>
+              <button class="tool" data-tool="rect"><span>▭</span>框選</button>
+              <button class="tool" data-tool="mask-eraser"><span>⌫</span>擦除遮罩</button>
+              <button class="tool" data-tool="pan"><span>✥</span>移動畫面</button>
+            </div>
+
+            <label class="field">
+              <span>筆刷大小 <output id="brushSizeValue">42 px</output></span>
+              <input id="brushSize" type="range" min="4" max="220" value="42" />
+            </label>
+            <label class="field">
+              <span>遮罩擴張 <output id="expandValue">2 px</output></span>
+              <input id="expandMask" type="range" min="0" max="18" value="2" />
+            </label>
+            <label class="field">
+              <span>修補半徑 <output id="radiusValue">5 px</output></span>
+              <input id="inpaintRadius" type="range" min="1" max="20" value="5" />
+            </label>
+
+            <button class="button accent full" id="inpaintBtn">智慧修補所選原文</button>
+            <div class="button-grid two">
+              <button class="button" id="fillWhiteBtn">填成白色</button>
+              <button class="button" id="fillColorBtn">以選色填滿</button>
+            </div>
+            <label class="inline-color">
+              <span>填色</span>
+              <input id="fillColor" type="color" value="#ffffff" />
+            </label>
+            <button class="button ghost full" id="clearMaskBtn">清除遮罩</button>
+            <p class="hint">先覆蓋日文或其他原文，再按「智慧修補」。對白框內的純色背景可直接使用白色填滿。</p>
+          </section>
+
+          <section class="panel-section">
+            <h2>背景消除</h2>
+            <button class="button full" id="removeBgBtn">自動移除圖片背景</button>
+            <div class="progress-wrap hidden" id="bgProgressWrap">
+              <div class="progress"><i id="bgProgressBar"></i></div>
+              <small id="bgProgressText">準備模型…</small>
+            </div>
+            <p class="hint">首次使用需下載約數十 MB 模型。處理在瀏覽器本機進行。</p>
+          </section>
+        </aside>
+
+        <section class="editor-shell">
+          <div class="canvas-toolbar">
+            <div class="zoom-controls">
+              <button class="icon-button" id="zoomOutBtn" title="縮小">−</button>
+              <button class="zoom-label" id="zoomLabel">100%</button>
+              <button class="icon-button" id="zoomInBtn" title="放大">＋</button>
+            </div>
+            <div class="status" id="statusText">請先上傳漫畫圖片</div>
+            <button class="button ghost compact" id="fullscreenBtn">全螢幕</button>
+          </div>
+          <div class="canvas-viewport" id="canvasViewport">
+            <canvas id="editorCanvas"></canvas>
+            <div class="empty-state" id="emptyState">
+              <div class="empty-illustration">文</div>
+              <h3>拖放漫畫圖片到這裡</h3>
+              <p>塗抹原文 → 自動修補 → 加入譯文 → 下載</p>
+              <button class="button primary" id="emptyUploadBtn">選擇圖片</button>
+            </div>
+          </div>
+          <div class="bottom-tip">滑鼠滾輪縮放 · 空白鍵拖動畫面 · Ctrl+Z 復原 · Delete 刪除文字</div>
+        </section>
+
+        <aside class="sidebar right-panel">
+          <section class="panel-section">
+            <div class="section-title-row">
+              <h2>譯文嵌字</h2>
+              <button class="button tiny" id="addTextBtn">＋ 新增文字</button>
+            </div>
+            <textarea id="textContent" class="textarea" rows="5" placeholder="輸入翻譯後的中文內容…"></textarea>
+
+            <div class="segmented" role="group" aria-label="文字方向">
+              <button class="active" data-direction="horizontal">橫排</button>
+              <button data-direction="vertical">直排</button>
+            </div>
+
+            <label class="field select-field">
+              <span>字體</span>
+              <select id="fontFamily">
+                <option value="'Noto Sans TC', sans-serif">Noto Sans TC</option>
+                <option value="'Noto Serif TC', serif">Noto Serif TC</option>
+                <option value="'Microsoft JhengHei', sans-serif">微軟正黑體</option>
+                <option value="'PMingLiU', serif">新細明體</option>
+                <option value="Arial, sans-serif">Arial</option>
+              </select>
+            </label>
+
+            <div class="field-row">
+              <label class="field compact-field">
+                <span>大小</span>
+                <input id="fontSize" type="number" min="8" max="300" value="42" />
+              </label>
+              <label class="field compact-field">
+                <span>行距</span>
+                <input id="lineHeight" type="number" min="0.7" max="3" step="0.05" value="1.25" />
+              </label>
+            </div>
+            <div class="field-row">
+              <label class="field compact-field">
+                <span>字距</span>
+                <input id="letterSpacing" type="number" min="-10" max="50" value="1" />
+              </label>
+              <label class="field compact-field">
+                <span>框寬</span>
+                <input id="textBoxWidth" type="number" min="40" max="1600" value="360" />
+              </label>
+            </div>
+
+            <div class="format-row">
+              <button class="format-button active" id="boldBtn" title="粗體"><b>B</b></button>
+              <button class="format-button" id="italicBtn" title="斜體"><i>I</i></button>
+              <button class="format-button align active" data-align="left">左</button>
+              <button class="format-button align" data-align="center">中</button>
+              <button class="format-button align" data-align="right">右</button>
+            </div>
+
+            <div class="field-row">
+              <label class="color-field"><span>文字</span><input id="textColor" type="color" value="#111111" /></label>
+              <label class="color-field"><span>描邊</span><input id="strokeColor" type="color" value="#ffffff" /></label>
+              <label class="field compact-field">
+                <span>描邊寬</span>
+                <input id="strokeWidth" type="number" min="0" max="20" step="0.5" value="3" />
+              </label>
+            </div>
+
+            <div class="button-grid two">
+              <button class="button" id="duplicateTextBtn">複製文字</button>
+              <button class="button danger" id="deleteTextBtn">刪除文字</button>
+            </div>
+            <p class="hint">新增後可直接拖動文字；按一下文字即可重新編輯。直排會由右至左排列欄位。</p>
+          </section>
+
+          <section class="panel-section export-section">
+            <h2>輸出設定</h2>
+            <label class="field select-field">
+              <span>格式</span>
+              <select id="exportFormat">
+                <option value="image/png">PNG（透明背景）</option>
+                <option value="image/jpeg">JPG</option>
+                <option value="image/webp">WEBP</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>品質 <output id="qualityValue">92%</output></span>
+              <input id="exportQuality" type="range" min="50" max="100" value="92" />
+            </label>
+          </section>
+        </aside>
+      </main>
+
+      <div class="toast-container" id="toastContainer"></div>
+      <div class="busy-overlay hidden" id="busyOverlay">
+        <div class="spinner"></div>
+        <strong id="busyTitle">正在處理圖片</strong>
+        <span id="busyDetail">請勿關閉頁面</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
